@@ -2,12 +2,7 @@ import { getPreferenceValues } from "@raycast/api";
 import { createJiraUrl } from "./utils";
 import { handleJiraResponseError } from "./handlers";
 import fetch from "node-fetch";
-
-interface UserPreferences {
-  isJiraCloud: string; // "cloud" or "server"
-  username: string;
-  token: string;
-}
+import { UserPreferences } from "./types";
 
 const prefs = getPreferenceValues<UserPreferences>();
 

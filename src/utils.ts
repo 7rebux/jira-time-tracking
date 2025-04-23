@@ -13,6 +13,19 @@ export const parseTimeToSeconds = (input: string) => {
   return 0; // Return 0 if the input doesn't match the expected format
 };
 
+export function formatElapsedTimeToJiraFormat(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  let result = "";
+  if (hours > 0) result += `${hours}h `;
+  if (minutes > 0) result += `${minutes}m `;
+  if (remainingSeconds > 0) result += `${remainingSeconds}s`;
+
+  return result.trim();
+}
+
 const prefs = getPreferenceValues<Preferences>();
 
 export const createJiraUrl = (endpoint: string) => `https://${prefs.domain}${endpoint}`;

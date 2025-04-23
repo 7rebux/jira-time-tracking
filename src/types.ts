@@ -23,6 +23,13 @@ export type Preferences = {
   customJQL: string;
 };
 
+export type UserPreferences = {
+  isJiraCloud: string; // "cloud" or "server"
+  defaultProject?: string;
+  username: string;
+  token: string;
+};
+
 export type Issue = {
   key: string;
   fields: {
