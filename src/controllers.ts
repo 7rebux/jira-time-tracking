@@ -22,6 +22,8 @@ function getApiPath(path: string): string {
   if (!isJiraCloud) {
     if (path.includes("/project/search")) {
       path = path.replace("/rest/api/3/project/search", "/rest/api/2/project");
+    } else if (path.includes("/search/jql")) {
+      path = path.replace("/rest/api/3/search/jql", "/rest/api/2/search");
     } else if (path.includes("/search")) {
       path = path.replace("/rest/api/3/search", "/rest/api/2/search");
     } else {
@@ -43,7 +45,7 @@ export const getProjects = async (begin: number) => {
   };
 };
 
-export const getIssues = async (begin: number, projectId?: string) => {
+export const getIssues = async (nextPageToken?: string, projectId?: string) => {
   const jqlParts = [];
 
   // Add project ID filter if provided
@@ -58,20 +60,36 @@ export const getIssues = async (begin: number, projectId?: string) => {
 
   // Construct JQL query dynamically
   const jql = jqlParts.length > 0 ? `&jql=${jqlParts.join(" AND ")}` : "";
-  const basePath = `/rest/api/3/search?fields=summary,parent,project&maxResults=500&startAt=${begin}${jql}`;
+
+  // Build the base path with cursor-based pagination
+  let basePath = `/rest/api/3/search/jql?fields=summary,parent,project${jql}`;
+  if (nextPageToken) {
+    basePath += `&nextPageToken=${nextPageToken}`;
+  }
+
   const apiPath = getApiPath(basePath);
 
   console.log(`Fetching issues from: ${apiPath}`); // Debugging log
   const response = await jiraRequest(apiPath);
 
   return {
-    total: handlePaginationResp(response),
     data: handleIssueResp(response),
+    nextPageToken: handleNextPageToken(response),
   };
 };
 
 const handlePaginationResp = (resp: unknown) => {
-  return paginationValidator(resp) ? resp.total : 0;
+  // For cursor-based pagination, we don't have a total count upfront
+  // Return 0 to indicate we need to fetch more pages
+  return 0;
+};
+
+const handleNextPageToken = (resp: unknown) => {
+  if (typeof resp === "object" && resp !== null && "nextPageToken" in resp) {
+    const partial = resp as { nextPageToken: unknown };
+    return typeof partial.nextPageToken === "string" ? partial.nextPageToken : undefined;
+  }
+  return undefined;
 };
 
 const handleProjectResp = (resp: unknown): Project[] => {

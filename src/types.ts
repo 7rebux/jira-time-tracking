@@ -40,10 +40,12 @@ export type Issue = {
 export type Result = {
   total: number;
   data: Issue[] | Project[];
+  nextPageToken?: string;
 };
 
 export type IssueBody = {
   issues: Issue[];
+  nextPageToken?: string;
 } & unknown;
 
 export type ProjectBody = {

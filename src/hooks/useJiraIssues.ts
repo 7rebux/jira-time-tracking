@@ -8,12 +8,12 @@ export function useJiraIssues(selectedProject: string | undefined) {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const issuesPageGot = useRef(0);
-  const issuesPageTotal = useRef(1);
+  const nextPageToken = useRef<string | undefined>(undefined);
+  const hasMorePages = useRef(true);
 
   useEffect(() => {
-    issuesPageGot.current = 0;
-    issuesPageTotal.current = 1;
+    nextPageToken.current = undefined;
+    hasMorePages.current = true;
     setIssues([]);
   }, [selectedProject]);
 
@@ -21,7 +21,7 @@ export function useJiraIssues(selectedProject: string | undefined) {
     let isMounted = true;
 
     const fetchIssues = async () => {
-      if (!selectedProject || issuesPageGot.current >= issuesPageTotal.current) {
+      if (!selectedProject || !hasMorePages.current) {
         setLoading(false);
         return;
       }
@@ -29,7 +29,7 @@ export function useJiraIssues(selectedProject: string | undefined) {
       setLoading(true);
 
       try {
-        const result = await getIssues(issuesPageGot.current, selectedProject);
+        const result = await getIssues(nextPageToken.current, selectedProject);
         if (result.data.length > 0 && isMounted) {
           setIssues((prevIssues) => {
             const allIssues = [...prevIssues, ...result.data];
@@ -40,13 +40,23 @@ export function useJiraIssues(selectedProject: string | undefined) {
             return uniqueIssues;
           });
 
-          issuesPageTotal.current = result.total;
-          issuesPageGot.current += result.data.length;
+          // Update pagination state
+          nextPageToken.current = result.nextPageToken;
+          hasMorePages.current = !!result.nextPageToken;
 
-          showToast(Toast.Style.Success, `Issues loaded ${issuesPageGot.current}/${issuesPageTotal.current}`);
+          const totalLoaded = issues.length + result.data.length;
+
+          if (hasMorePages.current) {
+            // Continue fetching the next page automatically
+            setTimeout(() => fetchIssues(), 100);
+          } else {
+            setLoading(false);
+            showToast(Toast.Style.Success, `Issues loaded ${totalLoaded} (all loaded)`);
+          }
         } else {
+          hasMorePages.current = false;
           setLoading(false);
-          showToast(Toast.Style.Success, `Issues loaded ${issuesPageGot.current}/${issuesPageTotal.current}`);
+          showToast(Toast.Style.Success, `Issues loaded ${issues.length}`);
         }
       } catch (e) {
         if (isMounted) {
@@ -62,7 +72,7 @@ export function useJiraIssues(selectedProject: string | undefined) {
       isMounted = false;
       setLoading(false);
     };
-  }, [selectedProject, issues.length]);
+  }, [selectedProject]);
 
   return {
     issues,
